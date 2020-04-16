@@ -4,11 +4,13 @@ import os
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import seaborn as sns
+import json
 from sklearn.externals import joblib
 
-
-#from pandas.tools.plotting import lag_plot
-from pandas.tools.plotting import autocorrelation_plot
+from pandas import Grouper
+#from pandas.plotting import lag_plot
+#from pandas.plotting import autocorrelation_plot
 from statsmodels.graphics.tsaplots import plot_acf
 from statsmodels.graphics.tsaplots import plot_pacf
 from sklearn.metrics import mean_squared_error
@@ -20,13 +22,20 @@ from statsmodels.tsa.stattools import adfuller
 #from statsmodels.tsa.ar_model import AR
 from statsmodels.tsa.arima_model import ARIMA
 
+from azureml.core import Dataset, Run
+
 run = Run.get_context()
 # get input dataset by name
-dataset = run.input_datasets['robberies']
+#dataset = run.input_datasets['robberies']
+
+ws = run.experiment.workspace
+dataset = Dataset.get_by_name(workspace=ws, name='robberies')
 
 df = dataset.to_pandas_dataframe()
 df.index = df['Month']
-series = pd.Series(df)
+df = df.drop('Month', axis=1)
+df.columns = ['Robberies']
+series = pd.Series(df['Robberies'])
 
 def mean_and_variance(X):
     split = int(len(X) / 2)
@@ -68,7 +77,7 @@ residuals.plot(kind='kde')
 plt.show()
 print(residuals.describe())
 
-predictions=model_fit.forecast(steps=13)[0]
+predictions=model_fit.forecast(steps=test.size)[0]
 
 mse = mean_squared_error(test, predictions)
 rmse = np.sqrt(mse)
@@ -76,10 +85,34 @@ r2 = r2_score(test,predictions)
 print('Test RMSE: %.3f' % rmse)
 print('Test R2: %.3f' % r2)
 
+#### ROLLING FORECAST
+
+history = [x for x in train]
+predictions = list()
+for t in range(len(test)):
+    model = ARIMA(history, order=(4,2,1))
+    model_fit = model.fit(disp=0)
+    output = model_fit.forecast()
+    yhat = output[0]
+    predictions.append(yhat)
+    obs = test[t]
+    history.append(obs)
+    print('predicted=%f, expected=%f' % (yhat, obs))
+error = mean_squared_error(test, predictions)
+rmse = np.sqrt(mse)
+r2 = r2_score(test,predictions)
+print('Test RMSE: %.3f' % rmse)
+print('Test R2: %.3f' % r2)
+
+# plot
+plt.plot(test)
+plt.plot(predictions, color='red')
+plt.show()
+
 run.log('RMSE', rmse)
 run.log('R2', r2)
 
-model_file_name = 'arima_amlcompute.pkl'
+model_file_name = 'arima_model.pkl'
 
 os.makedirs('./outputs', exist_ok=True)
 with open(model_file_name, 'wb') as file:
