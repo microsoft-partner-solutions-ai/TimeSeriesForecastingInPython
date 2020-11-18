@@ -1,0 +1,6 @@
+{
+    "subscription_id": "87eebea1-6e48-4a13-8ad5-8a89ed77fe10",
+    "resource_group": "rg-scorecard-production-sfo1-01",
+    "workspace_name": "ScorecardPOC",
+    "location": "westus2"
+}

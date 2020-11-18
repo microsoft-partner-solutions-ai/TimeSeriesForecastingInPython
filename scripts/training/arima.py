@@ -6,7 +6,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import json
-from sklearn.externals import joblib
+#from sklearn.externals import joblib
+import joblib
 
 from pandas import Grouper
 #from pandas.plotting import lag_plot
@@ -112,7 +113,7 @@ plt.show()
 run.log('RMSE', rmse)
 run.log('R2', r2)
 
-model_file_name = 'arima_model.pkl'
+model_file_name = 'arima_notebook_model.pkl'
 
 os.makedirs('./outputs', exist_ok=True)
 with open(model_file_name, 'wb') as file:
